@@ -9,6 +9,8 @@
 #import "MGTwitterEngine.h"
 #import "MGTwitterHTTPURLConnection.h"
 
+#import "OAMutableURLRequest.h"
+
 #import "NSData+Base64.h"
 
 #define USE_LIBXML 0
@@ -41,6 +43,9 @@
 
 @interface MGTwitterEngine (PrivateMethods)
 
+
+
+
 // Utility methods
 - (NSDateFormatter *)_HTTPDateFormatter;
 - (NSString *)_queryStringWithBase:(NSString *)base parameters:(NSDictionary *)params prefixed:(BOOL)prefixed;
@@ -66,6 +71,12 @@
 
 
 @implementation MGTwitterEngine
+
+@synthesize oaToken = _oaToken;
+@synthesize oaConsumer = _oaConsumer;
+
+
+@synthesize oauthParams = _oauthParams;
 
 
 #pragma mark Constructors
@@ -97,6 +108,14 @@
 
 - (void)dealloc
 {
+	[_oaToken release];
+	[_oaConsumer release];
+	_oaToken = nil;
+	_oaConsumer = nil;
+	
+	[_oauthParams release];
+	_oauthParams = nil;
+
     _delegate = nil;
     
     [[_connections allValues] makeObjectsPerformSelector:@selector(cancel)];
@@ -394,9 +413,9 @@
 {
     // Construct appropriate URL string.
     NSString *fullPath = path;
-    if (params) {
-        fullPath = [self _queryStringWithBase:fullPath parameters:params prefixed:YES];
-    }
+//    if (params) {
+//        fullPath = [self _queryStringWithBase:fullPath parameters:params prefixed:YES];
+//    }
 
 #if SET_AUTHORIZATION_IN_HEADER
     NSString *urlString = [NSString stringWithFormat:@"%@://%@/%@", 
@@ -415,9 +434,14 @@
     }
     
     // Construct an NSMutableURLRequest for the URL and set appropriate request method.
-    NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:finalURL 
+	/*
+    OAMutableURLRequest *theRequest = [OAMutableURLRequest requestWithURL:finalURL 
                                                               cachePolicy:NSURLRequestReloadIgnoringCacheData 
                                                           timeoutInterval:URL_REQUEST_TIMEOUT];
+	 */
+	OAMutableURLRequest *theRequest = [[[OAMutableURLRequest alloc] initWithURL:finalURL
+									   consumer:self.oaConsumer token:self.oaToken realm:nil
+															  signatureProvider:nil] autorelease];
     if (method) {
         [theRequest setHTTPMethod:method];
     }
@@ -457,6 +481,9 @@
         }
     }
     
+	[theRequest prepare];
+	
+	
     
     // Create a connection using this request, with the default timeout and caching policy, 
     // and appropriate Twitter request and response types for parsing and error reporting.
@@ -604,6 +631,10 @@
 
 - (void)connection:(NSURLConnection *)connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 {
+	//kimptoc hack
+	[[challenge sender] continueWithoutCredentialForAuthenticationChallenge:challenge];
+	return;
+	
 	if ([challenge previousFailureCount] == 0 && ![challenge proposedCredential]) {
 		NSURLCredential *credential = [NSURLCredential credentialWithUser:_username password:_password 
 															  persistence:NSURLCredentialPersistenceForSession];
@@ -1289,6 +1320,7 @@
     if (updateID > 0) {
         [params setObject:[NSString stringWithFormat:@"%d", updateID] forKey:@"in_reply_to_status_id"];
     }
+	[params addEntriesFromDictionary:self.oauthParams];
     NSString *body = [self _queryStringWithBase:nil parameters:params prefixed:NO];
     
     return [self _sendRequestWithMethod:HTTP_POST_METHOD path:path 

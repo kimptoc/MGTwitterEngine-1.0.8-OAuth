@@ -11,6 +11,9 @@
 #import "MGTwitterEngineDelegate.h"
 #import "MGTwitterParserDelegate.h"
 
+#import "OAToken.h"
+#import "OAConsumer.h"
+
 @interface MGTwitterEngine : NSObject <MGTwitterParserDelegate> {
     __weak NSObject <MGTwitterEngineDelegate> *_delegate;
     NSString *_username;
@@ -23,7 +26,16 @@
 	NSString *_APIDomain;
     BOOL _secureConnection;
 	BOOL _clearsCookies;
+	// kimptoc hask
+	NSDictionary *_oauthParams;
+	OAToken *_oaToken;
+	OAConsumer *_oaConsumer;
 }
+
+@property(nonatomic,retain)OAToken *oaToken;
+@property(nonatomic,retain)OAConsumer *oaConsumer;
+
+@property(nonatomic,retain)NSDictionary *oauthParams;
 
 // Constructors
 + (MGTwitterEngine *)twitterEngineWithDelegate:(NSObject *)delegate;
